@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlmodel
+psycopg2-binary
+pgvector
+python-dotenv
+requests
+beautifulsoup4
+openai
+google-generativeai

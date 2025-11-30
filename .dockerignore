@@ -1,0 +1,18 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+
+# Virtual environment folders
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE / editor files (optional but recommended)
+.vscode/
+.idea/
+
+# OS files
+.DS_Store

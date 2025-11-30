@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neusearch AI Assistant</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel (to write JSX in browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- COMPONENTS ---
+
+        // 1. Product Card
+        const ProductCard = ({ product }) => (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                <div className="h-48 bg-gray-50 flex items-center justify-center overflow-hidden relative">
+                    {product.image_url ? (
+                        <img src={product.image_url} alt={product.title} className="w-full h-full object-contain p-4" />
+                    ) : (
+                        <div className="text-gray-300"><i data-lucide="image" size="48"></i></div>
+                    )}
+                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-700">
+                        {product.price}
+                    </div>
+                </div>
+                <div className="p-4">
+                    <h3 className="font-semibold text-gray-800 line-clamp-1" title={product.title}>{product.title}</h3>
+                    <p className="text-xs text-indigo-600 font-medium mb-2">{product.category}</p>
+                    <p className="text-sm text-gray-500 line-clamp-2 mb-4">{product.description}</p>
+                    <a 
+                        href={product.product_url} 
+                        target="_blank" 
+                        className="block w-full text-center bg-black text-white py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                    >
+                        View Product
+                    </a>
+                </div>
+            </div>
+        );
+
+        // 2. Chat Message (With Bold Text Support)
+        const ChatMessage = ({ msg }) => {
+            const isBot = msg.role === 'bot';
+            
+            const formatText = (text) => {
+                if (!text) return "";
+                return text.split('\n').map((line, i) => (
+                    <span key={i} className="block mb-2">
+                        {line.split(/(\*\*.*?\*\*)/).map((part, j) => {
+                            if (part.startsWith('**') && part.endsWith('**')) {
+                                return <strong key={j}>{part.slice(2, -2)}</strong>;
+                            }
+                            return part;
+                        })}
+                    </span>
+                ));
+            };
+
+            return (
+                <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} mb-6 animate-fade-in`}>
+                    <div className={`max-w-[85%] ${isBot ? '' : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm p-4 shadow-md'}`}>
+                        {isBot && (
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                                    AI
+                                </div>
+                                <span className="text-xs font-semibold text-gray-500">Neusearch Assistant</span>
+                            </div>
+                        )}
+                        <div className={isBot ? "bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-gray-700 leading-relaxed" : ""}>
+                            <div>{formatText(msg.content)}</div>
+                            {msg.products && msg.products.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Recommended for you</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {msg.products.map(p => <ProductCard key={p.id} product={p} />)}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 3. Main App
+        const App = () => {
+            const [view, setView] = useState('home');
+            const [products, setProducts] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [query, setQuery] = useState('');
+            const [chatHistory, setChatHistory] = useState([
+                { role: 'bot', content: "Hello! I'm your AI shopping assistant. Ask me anything like 'I have dry hair' or 'Something for a party'." }
+            ]);
+            const [isTyping, setIsTyping] = useState(false);
+            const chatEndRef = useRef(null);
+
+            // Fetch Products (Relative Path Change Here)
+            useEffect(() => {
+                setLoading(true);
+                setError(null);
+                fetch('/products') // <--- CHANGED FROM http://127.0.0.1:8000/products
+                    .then(res => {
+                        if (!res.ok) throw new Error("Failed to connect to backend");
+                        return res.json();
+                    })
+                    .then(data => {
+                        setProducts(data);
+                        setLoading(false);
+                        setTimeout(() => lucide.createIcons(), 100);
+                    })
+                    .catch(err => {
+                        console.error("Fetch Error:", err);
+                        setError("Could not connect to the Backend API.");
+                        setLoading(false);
+                    });
+            }, []);
+
+            useEffect(() => {
+                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                lucide.createIcons();
+            }, [chatHistory, view, products, error]);
+
+            const handleSend = async (e) => {
+                e.preventDefault();
+                if (!query.trim()) return;
+
+                const userMsg = { role: 'user', content: query };
+                setChatHistory(prev => [...prev, userMsg]);
+                setQuery('');
+                setIsTyping(true);
+
+                try {
+                    // Chat Fetch (Relative Path Change Here)
+                    const res = await fetch(`/chat?query=${encodeURIComponent(userMsg.content)}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (!res.ok) throw new Error("API Error");
+                    
+                    const data = await res.json();
+                    const botMsg = { role: 'bot', content: data.response, products: data.recommended_products };
+                    setChatHistory(prev => [...prev, botMsg]);
+                } catch (error) {
+                    console.error("Chat Error:", error);
+                    setChatHistory(prev => [...prev, { role: 'bot', content: "⚠️ Connection Error: I cannot reach the server." }]);
+                } finally {
+                    setIsTyping(false);
+                }
+            };
+
+            return (
+                <div className="flex h-screen overflow-hidden">
+                    {/* Sidebar */}
+                    <div className="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex">
+                        <div className="p-6">
+                            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Neusearch AI</h1>
+                            <p className="text-xs text-gray-400 mt-1">By - Adarsh Kumar</p>
+                        </div>
+                        <nav className="flex-1 px-4 space-y-2">
+                            <button onClick={() => setView('home')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === 'home' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}><i data-lucide="layout-grid" className="w-5 h-5"></i> All Products</button>
+                            <button onClick={() => setView('chat')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === 'chat' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}><i data-lucide="message-square" className="w-5 h-5"></i> AI Assistant</button>
+                        </nav>
+                    </div>
+
+                    {/* Main Content */}
+                    <main className="flex-1 flex flex-col h-full relative">
+                        <div className="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+                            <span className="font-bold text-lg text-indigo-600">Neusearch</span>
+                            <div className="flex gap-2">
+                                <button onClick={() => setView('home')} className={`p-2 rounded ${view === 'home' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500'}`}><i data-lucide="layout-grid" width="20"></i></button>
+                                <button onClick={() => setView('chat')} className={`p-2 rounded ${view === 'chat' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500'}`}><i data-lucide="message-square" width="20"></i></button>
+                            </div>
+                        </div>
+
+                        {view === 'home' && (
+                            <div className="flex-1 overflow-y-auto p-6 md:p-8">
+                                <div className="flex justify-between items-end mb-8">
+                                    <div><h2 className="text-2xl font-bold text-gray-800">Discover Products</h2><p className="text-gray-500 mt-1">Showing {products.length} scraped items</p></div>
+                                </div>
+                                {error ? (
+                                    <div className="flex flex-col items-center justify-center py-20 bg-red-50 rounded-xl border border-red-100 p-8 text-center"><div className="bg-red-100 p-3 rounded-full mb-4"><i data-lucide="wifi-off" className="text-red-500 w-8 h-8"></i></div><h3 className="text-lg font-bold text-red-700 mb-2">Connection Failed</h3><p className="text-red-600">{error}</p></div>
+                                ) : loading ? (
+                                    <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">{products.map(product => <ProductCard key={product.id} product={product} />)}</div>
+                                )}
+                            </div>
+                        )}
+
+                        {view === 'chat' && (
+                            <div className="flex-1 flex flex-col h-full bg-white md:bg-transparent">
+                                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
+                                    {chatHistory.map((msg, i) => <ChatMessage key={i} msg={msg} />)}
+                                    {isTyping && <div className="flex justify-start animate-fade-in"><div className="bg-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 flex gap-1"><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div></div></div>}
+                                    <div ref={chatEndRef}></div>
+                                </div>
+                                <div className="p-4 bg-white border-t border-gray-200">
+                                    <form onSubmit={handleSend} className="max-w-3xl mx-auto relative flex gap-2">
+                                        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ask anything... e.g. 'I have dandruff'" className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                                        <button type="submit" disabled={!query.trim() || isTyping} className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><i data-lucide="send" width="20"></i></button>
+                                    </form>
+                                    <p className="text-center text-xs text-gray-400 mt-2">Powered by Gemini Flash & pgvector</p>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

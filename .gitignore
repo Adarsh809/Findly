@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+
+# Ignore Secrets
+.env
+
+# Ignore Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+
+# Ignore OS files
+.DS_Store
