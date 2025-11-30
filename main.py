@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse # <--- NEW
+from fastapi.responses import FileResponse
 from sqlmodel import Session, select
 from database import create_db_and_tables, get_session
 from models import Product
@@ -14,15 +14,16 @@ def generate_rag_response(query: str, products: list[Product]) -> str:
     for idx, p in enumerate(products, 1):
         context += f"{idx}. {p.title} - {p.price}\n   Description: {p.description[:300]}...\n\n"
 
+    # --- UPDATED PROMPT ---
     system_instruction = """
     You are a helpful shopping assistant for Neusearch.
     
     INSTRUCTIONS:
     1. Analyze the User Query and the Available Products.
-    2. If the user's query is specific (e.g., "dandruff", "sleep"), recommend the best matching products and explain WHY.
-    3. CRITICAL: If the query is too vague (e.g., just "hair", "best product", "help"), DO NOT recommend random items. Instead, ask a polite CLARIFYING QUESTION.
-    4. SIGNAL: If you are asking a clarifying question, start your response with the tag "[CLARIFY]".
-    5. Keep your answer concise and friendly.
+    2. If the user's query is specific (e.g., "dandruff", "sleep"), recommend the TOP 4 matching products from the list.
+    3. Briefly explain WHY each of the 4 products is a good fit.
+    4. CRITICAL: If the query is too vague (e.g., just "hair", "best product", "help"), DO NOT recommend random items. Instead, ask a polite CLARIFYING QUESTION.
+    5. SIGNAL: If you are asking a clarifying question, start your response with the tag "[CLARIFY]".
     """
 
     try:
@@ -50,34 +51,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- SERVE FRONTEND (NEW) ---
 @app.get("/")
 def read_root():
-    # Serves the React frontend when you visit the root URL
     return FileResponse('frontend/index.html')
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "message": "Neusearch Gemini Backend Ready"}
+    return {"status": "ok", "message": "Neusearch Backend Ready"}
 
 @app.get("/products")
 def get_all_products(session: Session = Depends(get_session)):
-    """Fetches products and cleans data."""
+    """Fetches products and cleans data safely."""
     products = session.exec(select(Product)).all()
     clean_products = []
     for p in products:
-        p_dict = p.model_dump()
-        if "embedding" in p_dict: del p_dict["embedding"]
+        p_dict = p.model_dump(exclude={"embedding"})
         clean_products.append(p_dict)
     return clean_products
 
 @app.post("/chat")
 def chat_endpoint(query: str, session: Session = Depends(get_session)):
-    # 1. Greeting Guard
-    greetings = ["hi", "hello", "hey", "good morning", "good evening", "hola"]
-    if query.lower().strip() in greetings:
+    # 1. Greeting & Exit Guard
+    conversational_phrases = ["hi", "hello", "hey", "good morning", "hola", "bye", "goodbye", "thanks", "thank you"]
+    
+    if query.lower().strip() in conversational_phrases:
+        if query.lower().strip() in ["bye", "goodbye"]:
+            reply = "Goodbye! 👋 If you have any questions later, feel free to ask."
+        elif query.lower().strip() in ["thanks", "thank you"]:
+            reply = "You're welcome! Let me know if you need anything else."
+        else:
+            reply = "Hello! 👋 I am your AI shopping assistant. How can I help you today? (e.g., 'I have dry hair')"
+            
         return {
-            "response": "Hello! 👋 I am your AI shopping assistant. How can I help you today? (e.g., 'I have dry hair')",
+            "response": reply,
             "recommended_products": []
         }
 
@@ -92,7 +98,7 @@ def chat_endpoint(query: str, session: Session = Depends(get_session)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Embedding Error: {e}")
 
-    # 3. Search
+    # 3. Search (Ensuring 4 items are fetched)
     products = session.exec(
         select(Product)
         .order_by(Product.embedding.l2_distance(query_vector))
@@ -105,16 +111,14 @@ def chat_endpoint(query: str, session: Session = Depends(get_session)):
     # 4. Generate Response
     ai_reply = generate_rag_response(query, products)
 
-    # 5. Smart Filtering
+    # 5. Smart Filtering & Safe Serialization
     clean_recommendations = []
     if "[CLARIFY]" in ai_reply:
         ai_reply = ai_reply.replace("[CLARIFY]", "").strip()
         clean_recommendations = []
     else:
         for p in products:
-            p_dict = p.model_dump()
-            if "embedding" in p_dict:
-                del p_dict["embedding"]
+            p_dict = p.model_dump(exclude={"embedding"})
             clean_recommendations.append(p_dict)
 
     return {
