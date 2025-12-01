@@ -4,20 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neusearch AI Assistant</title>
-    
-    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
-    <!-- Babel (to write JSX in browser) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Icons (Lucide) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -36,10 +27,60 @@
 
         // --- COMPONENTS ---
 
-        // 1. Product Card
-        const ProductCard = ({ product }) => (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="h-48 bg-gray-50 flex items-center justify-center overflow-hidden relative">
+        // 1. Product Detail View (NEW)
+        const ProductDetail = ({ product, onBack }) => (
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 animate-fade-in">
+                <button 
+                    onClick={onBack}
+                    className="flex items-center text-gray-500 hover:text-indigo-600 mb-6 transition-colors"
+                >
+                    <i data-lucide="arrow-left" className="w-5 h-5 mr-2"></i> Back to Browse
+                </button>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row">
+                    {/* Image Section */}
+                    <div className="md:w-1/2 bg-gray-50 p-8 flex items-center justify-center">
+                        {product.image_url ? (
+                            <img src={product.image_url} alt={product.title} className="max-h-[400px] object-contain mix-blend-multiply" />
+                        ) : (
+                            <div className="text-gray-300"><i data-lucide="image" size="64"></i></div>
+                        )}
+                    </div>
+
+                    {/* Info Section */}
+                    <div className="md:w-1/2 p-8 md:p-12 flex flex-col">
+                        <div className="flex justify-between items-start mb-4">
+                            <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                                {product.category || "Product"}
+                            </span>
+                            <span className="text-2xl font-bold text-gray-900">{product.price}</span>
+                        </div>
+
+                        <h1 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">{product.title}</h1>
+                        
+                        <div className="prose prose-sm text-gray-600 mb-8 overflow-y-auto max-h-60 custom-scrollbar">
+                            <h3 className="text-gray-900 font-semibold mb-2">Description</h3>
+                            <p className="whitespace-pre-wrap leading-relaxed">{product.description}</p>
+                        </div>
+
+                        <div className="mt-auto pt-6 border-t border-gray-100 flex gap-4">
+                            <a 
+                                href={product.product_url} 
+                                target="_blank"
+                                className="flex-1 bg-black text-white text-center py-3 rounded-xl font-medium hover:bg-gray-800 transition-all shadow-lg shadow-gray-200"
+                            >
+                                Buy on Traya
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // 2. Product Card (Updated onClick)
+        const ProductCard = ({ product, onClick }) => (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
+                <div className="h-48 bg-gray-50 flex items-center justify-center overflow-hidden relative cursor-pointer" onClick={() => onClick(product)}>
                     {product.image_url ? (
                         <img src={product.image_url} alt={product.title} className="w-full h-full object-contain p-4" />
                     ) : (
@@ -49,23 +90,30 @@
                         {product.price}
                     </div>
                 </div>
-                <div className="p-4">
-                    <h3 className="font-semibold text-gray-800 line-clamp-1" title={product.title}>{product.title}</h3>
-                    <p className="text-xs text-indigo-600 font-medium mb-2">{product.category}</p>
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-4">{product.description}</p>
-                    <a 
-                        href={product.product_url} 
-                        target="_blank" 
-                        className="block w-full text-center bg-black text-white py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                <div className="p-4 flex-1 flex flex-col">
+                    <h3 
+                        className="font-semibold text-gray-800 line-clamp-1 cursor-pointer hover:text-indigo-600" 
+                        title={product.title}
+                        onClick={() => onClick(product)}
                     >
-                        View Product
-                    </a>
+                        {product.title}
+                    </h3>
+                    <p className="text-xs text-indigo-600 font-medium mb-2">{product.category}</p>
+                    <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">{product.description}</p>
+                    
+                    {/* CHANGED: Opens Internal Detail View instead of External Link */}
+                    <button 
+                        onClick={() => onClick(product)}
+                        className="w-full text-center bg-white border border-gray-200 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                    >
+                        View Details
+                    </button>
                 </div>
             </div>
         );
 
-        // 2. Chat Message (With Bold Text Support)
-        const ChatMessage = ({ msg }) => {
+        // 3. Chat Message
+        const ChatMessage = ({ msg, onProductClick }) => {
             const isBot = msg.role === 'bot';
             
             const formatText = (text) => {
@@ -87,9 +135,7 @@
                     <div className={`max-w-[85%] ${isBot ? '' : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm p-4 shadow-md'}`}>
                         {isBot && (
                             <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
-                                    AI
-                                </div>
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">AI</div>
                                 <span className="text-xs font-semibold text-gray-500">Neusearch Assistant</span>
                             </div>
                         )}
@@ -99,7 +145,9 @@
                                 <div className="mt-4 pt-4 border-t border-gray-100">
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Recommended for you</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {msg.products.map(p => <ProductCard key={p.id} product={p} />)}
+                                        {msg.products.map(p => (
+                                            <ProductCard key={p.id} product={p} onClick={onProductClick} />
+                                        ))}
                                     </div>
                                 </div>
                             )}
@@ -109,10 +157,11 @@
             );
         };
 
-        // 3. Main App
+        // 4. Main App
         const App = () => {
-            const [view, setView] = useState('home');
+            const [view, setView] = useState('home'); // home, chat, detail
             const [products, setProducts] = useState([]);
+            const [selectedProduct, setSelectedProduct] = useState(null); // Track clicked product
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [query, setQuery] = useState('');
@@ -122,11 +171,9 @@
             const [isTyping, setIsTyping] = useState(false);
             const chatEndRef = useRef(null);
 
-            // Fetch Products (Relative Path Change Here)
             useEffect(() => {
                 setLoading(true);
-                setError(null);
-                fetch('/products') // <--- CHANGED FROM http://127.0.0.1:8000/products
+                fetch('/products')
                     .then(res => {
                         if (!res.ok) throw new Error("Failed to connect to backend");
                         return res.json();
@@ -137,16 +184,22 @@
                         setTimeout(() => lucide.createIcons(), 100);
                     })
                     .catch(err => {
-                        console.error("Fetch Error:", err);
                         setError("Could not connect to the Backend API.");
                         setLoading(false);
                     });
             }, []);
 
             useEffect(() => {
-                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                if (view === 'chat') {
+                    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }
                 lucide.createIcons();
-            }, [chatHistory, view, products, error]);
+            }, [chatHistory, view, products]);
+
+            const handleProductClick = (product) => {
+                setSelectedProduct(product);
+                setView('detail');
+            };
 
             const handleSend = async (e) => {
                 e.preventDefault();
@@ -158,18 +211,12 @@
                 setIsTyping(true);
 
                 try {
-                    // Chat Fetch (Relative Path Change Here)
-                    const res = await fetch(`/chat?query=${encodeURIComponent(userMsg.content)}`, {
-                        method: 'POST'
-                    });
-                    
+                    const res = await fetch(`/chat?query=${encodeURIComponent(userMsg.content)}`, { method: 'POST' });
                     if (!res.ok) throw new Error("API Error");
-                    
                     const data = await res.json();
                     const botMsg = { role: 'bot', content: data.response, products: data.recommended_products };
                     setChatHistory(prev => [...prev, botMsg]);
                 } catch (error) {
-                    console.error("Chat Error:", error);
                     setChatHistory(prev => [...prev, { role: 'bot', content: "⚠️ Connection Error: I cannot reach the server." }]);
                 } finally {
                     setIsTyping(false);
@@ -182,10 +229,10 @@
                     <div className="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex">
                         <div className="p-6">
                             <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Neusearch AI</h1>
-                            <p className="text-xs text-gray-400 mt-1">By - Adarsh Kumar</p>
+                            <p className="text-xs text-gray-400 mt-1">Intern Assignment</p>
                         </div>
                         <nav className="flex-1 px-4 space-y-2">
-                            <button onClick={() => setView('home')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === 'home' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}><i data-lucide="layout-grid" className="w-5 h-5"></i> All Products</button>
+                            <button onClick={() => setView('home')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === 'home' || view === 'detail' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}><i data-lucide="layout-grid" className="w-5 h-5"></i> All Products</button>
                             <button onClick={() => setView('chat')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === 'chat' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}><i data-lucide="message-square" className="w-5 h-5"></i> AI Assistant</button>
                         </nav>
                     </div>
@@ -200,25 +247,36 @@
                             </div>
                         </div>
 
+                        {/* VIEW: HOME */}
                         {view === 'home' && (
                             <div className="flex-1 overflow-y-auto p-6 md:p-8">
                                 <div className="flex justify-between items-end mb-8">
                                     <div><h2 className="text-2xl font-bold text-gray-800">Discover Products</h2><p className="text-gray-500 mt-1">Showing {products.length} scraped items</p></div>
                                 </div>
-                                {error ? (
-                                    <div className="flex flex-col items-center justify-center py-20 bg-red-50 rounded-xl border border-red-100 p-8 text-center"><div className="bg-red-100 p-3 rounded-full mb-4"><i data-lucide="wifi-off" className="text-red-500 w-8 h-8"></i></div><h3 className="text-lg font-bold text-red-700 mb-2">Connection Failed</h3><p className="text-red-600">{error}</p></div>
-                                ) : loading ? (
-                                    <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>
-                                ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">{products.map(product => <ProductCard key={product.id} product={product} />)}</div>
+                                {loading ? <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div> : 
+                                 error ? <div className="text-center text-red-500 py-10">{error}</div> :
+                                (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                        {products.map(product => (
+                                            <ProductCard key={product.id} product={product} onClick={handleProductClick} />
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         )}
 
+                        {/* VIEW: DETAIL (NEW) */}
+                        {view === 'detail' && selectedProduct && (
+                            <ProductDetail product={selectedProduct} onBack={() => setView('home')} />
+                        )}
+
+                        {/* VIEW: CHAT */}
                         {view === 'chat' && (
                             <div className="flex-1 flex flex-col h-full bg-white md:bg-transparent">
                                 <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
-                                    {chatHistory.map((msg, i) => <ChatMessage key={i} msg={msg} />)}
+                                    {chatHistory.map((msg, i) => (
+                                        <ChatMessage key={i} msg={msg} onProductClick={handleProductClick} />
+                                    ))}
                                     {isTyping && <div className="flex justify-start animate-fade-in"><div className="bg-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 flex gap-1"><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div></div></div>}
                                     <div ref={chatEndRef}></div>
                                 </div>
