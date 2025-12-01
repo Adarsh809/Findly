@@ -129,14 +129,17 @@ Follow these steps to run the application on your local machine.
 
 ### 1. Numpy Serialization Compatibility
 **Challenge:** The Google Generative AI library returns embeddings as NumPy arrays. FastAPI's default JSON encoder cannot serialize NumPy data types, causing the API to crash during the response phase.
+
 **Solution:** I implemented a manual serialization middleware within the endpoint logic. This explicitly converts NumPy arrays to standard Python lists (`list(vector)`) before the response is constructed. Additionally, I configured the API to exclude the heavy raw embedding data from the frontend response payload to reduce bandwidth usage.
 
 ### 2. Handling Ambiguous Queries
 **Challenge:** During testing, single-word queries like "hair" resulted in the vector search returning random hair-related products. While mathematically "correct" (they were the closest vectors), this was a poor user experience.
+
 **Solution:** I implemented a Clarification Protocol. The system prompt was engineered to detect ambiguity and return a specific tag `[CLARIFY]`. The backend logic intercepts this tag to prevent the rendering of irrelevant product cards and instead presents the user with a follow-up question.
 
 ### 3. Frontend Architecture Selection
 **Decision:** I opted for a CDN-based React architecture rather than a build-step heavy framework like Next.js or Vite.
+
 **Rationale:** This decision aligns with the assignment's "Single File" constraint for simplicity and ease of review. It eliminates the need for a separate frontend build process in the Docker container, significantly reducing deployment complexity and build times on Render.
 
 ## Future Improvements
@@ -144,5 +147,7 @@ Follow these steps to run the application on your local machine.
 Given more time, I would implement the following enhancements:
 
 1.  **Async Human-in-the-Loop (HITL):** I would add a feedback mechanism (Thumbs Up/Down) to the chat interface. Negative feedback would log the conversation query and response pair to a review database, allowing for the manual refinement of system prompts and the re-indexing of problematic products.
+
 2.  **HNSW Indexing:** The current implementation uses a flat search (exact nearest neighbor). As the dataset scales beyond 10,000 products, I would implement Hierarchical Navigable Small World (HNSW) indexing within `pgvector` to ensure sub-millisecond query performance at scale.
+
 3.  **Conversational Memory:** Currently, the application processes each query independently. I would integrate a Redis layer to store session-based conversation history, allowing users to ask follow-up questions such as "How much is the second one?" that reference previous context.
