@@ -1,25 +1,31 @@
-# 1. Base Image: Use a lightweight Python version
+# 1. Base Image
 FROM python:3.10-slim
 
-# 2. Set environment variables to ensure Python output is sent to logs immediately
+# 2. Set environment variables
 ENV PYTHONUNBUFFERED=1
 
 # 3. Set the working directory inside the container
 WORKDIR /app
 
-# 4. Copy requirements first (Optimization: Docker layers cache this step)
+# 4. Copy requirements (This stays in the root folder)
 COPY requirements.txt .
 
 # 5. Install dependencies
-# We use --no-cache-dir to keep the image small
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Copy the rest of the application code (Includes frontend folder!)
-COPY . .
+# --- THE MAGIC PART ---
+# Instead of copying ".", we copy specific folders to flatten the structure.
 
-# 7. Expose the port Render uses (Standard is 10000)
+# 6. Copy the contents of the 'backend' folder to the container's root
+# This puts main.py, models.py, etc. right inside /app/
+COPY backend/ .
+
+# 7. Copy the 'frontend' folder to /app/frontend/
+# This ensures FileResponse('frontend/index.html') still works
+COPY frontend/ frontend/
+
+# 8. Expose port
 EXPOSE 10000
 
-# 8. Start the application
-# We use shell format to properly expand the $PORT variable
+# 9. Start the app
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}"]

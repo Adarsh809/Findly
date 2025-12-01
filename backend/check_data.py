@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from database import engine
+from backend.database import engine
 from models import Product
 
 def view_data():

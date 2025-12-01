@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlmodel import Session, select
-from database import create_db_and_tables, get_session
+from backend.database import create_db_and_tables, get_session
 from models import Product
 import google.generativeai as genai
 import os

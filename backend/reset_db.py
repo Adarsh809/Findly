@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel
-from database import engine  # <--- FIXED: Import from database.py
+from backend.database import engine  # <--- FIXED: Import from database.py
 from models import Product   # Keep this to ensure models are registered
 
 def reset_database():

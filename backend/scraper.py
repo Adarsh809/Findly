@@ -1,9 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 from sqlmodel import Session, select
-from database import engine, create_db_and_tables
+from backend.database import engine, create_db_and_tables
 from models import Product
-from utils import get_embedding
+from backend.utils import get_embedding
 import time
 import re  # <--- NEW: Import Regex library
 
