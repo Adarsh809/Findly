@@ -5,7 +5,7 @@ Findly is a Retrieval-Augmented Generation (RAG) powered e-commerce assistant de
 ## Live Deployment and Demo
 
 - **Live Application:** https://findly-ow2v.onrender.com/
-- **Video Walkthrough:** [INSERT_YOUR_LOOM_VIDEO_LINK_HERE]
+- **Video Walkthrough:** https://drive.google.com/file/d/1wsDw5kIvVohEvzbSQpuS313Fm0gAW_Nz/view?usp=sharing
 
 ## System Architecture
 
