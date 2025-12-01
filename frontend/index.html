@@ -12,11 +12,13 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
         .typing-dot:nth-child(1) { animation-delay: -0.32s; }
         .typing-dot:nth-child(2) { animation-delay: -0.16s; }
         @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        /* Custom Fade In Animation */
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -25,23 +27,21 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- COMPONENTS ---
-
-        // 1. Product Detail View (NEW)
+        // --- 1. PRODUCT DETAIL VIEW (INTERNAL PAGE) ---
         const ProductDetail = ({ product, onBack }) => (
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 animate-fade-in">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 animate-fade-in h-full">
                 <button 
                     onClick={onBack}
-                    className="flex items-center text-gray-500 hover:text-indigo-600 mb-6 transition-colors"
+                    className="flex items-center text-gray-500 hover:text-indigo-600 mb-6 transition-colors font-medium"
                 >
-                    <i data-lucide="arrow-left" className="w-5 h-5 mr-2"></i> Back to Browse
+                    <i data-lucide="arrow-left" className="w-5 h-5 mr-2"></i> Back to Products
                 </button>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden flex flex-col md:flex-row min-h-[500px]">
                     {/* Image Section */}
-                    <div className="md:w-1/2 bg-gray-50 p-8 flex items-center justify-center">
+                    <div className="md:w-1/2 bg-gray-50 p-8 flex items-center justify-center relative">
                         {product.image_url ? (
-                            <img src={product.image_url} alt={product.title} className="max-h-[400px] object-contain mix-blend-multiply" />
+                            <img src={product.image_url} alt={product.title} className="max-h-[400px] w-full object-contain mix-blend-multiply transition-transform hover:scale-105 duration-300" />
                         ) : (
                             <div className="text-gray-300"><i data-lucide="image" size="64"></i></div>
                         )}
@@ -50,69 +50,65 @@
                     {/* Info Section */}
                     <div className="md:w-1/2 p-8 md:p-12 flex flex-col">
                         <div className="flex justify-between items-start mb-4">
-                            <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                                {product.category || "Product"}
+                            <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                                {product.category || "Recommendation"}
                             </span>
-                            <span className="text-2xl font-bold text-gray-900">{product.price}</span>
+                            <span className="text-3xl font-bold text-gray-900">{product.price}</span>
                         </div>
 
-                        <h1 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">{product.title}</h1>
+                        <h1 className="text-3xl font-extrabold text-gray-900 mb-6 leading-tight">{product.title}</h1>
                         
-                        <div className="prose prose-sm text-gray-600 mb-8 overflow-y-auto max-h-60 custom-scrollbar">
-                            <h3 className="text-gray-900 font-semibold mb-2">Description</h3>
-                            <p className="whitespace-pre-wrap leading-relaxed">{product.description}</p>
+                        <div className="prose prose-sm text-gray-600 mb-8 overflow-y-auto custom-scrollbar flex-1">
+                            <h3 className="text-gray-900 font-semibold mb-2 text-lg">About this product</h3>
+                            <p className="whitespace-pre-wrap leading-relaxed text-base">{product.description}</p>
                         </div>
 
-                        <div className="mt-auto pt-6 border-t border-gray-100 flex gap-4">
-                            <a 
-                                href={product.product_url} 
-                                target="_blank"
-                                className="flex-1 bg-black text-white text-center py-3 rounded-xl font-medium hover:bg-gray-800 transition-all shadow-lg shadow-gray-200"
+                        <div className="mt-auto pt-6 border-t border-gray-100">
+                            {/* DUMMY BUTTON - Keeps user inside the app */}
+                            <button 
+                                onClick={() => alert("This is a demo! Checkout functionality would go here.")}
+                                className="w-full bg-indigo-600 text-white text-center py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-200"
                             >
-                                Buy on Traya
-                            </a>
+                                Add to Cart
+                            </button>
+                            <p className="text-center text-xs text-gray-400 mt-3">Free shipping on all orders</p>
                         </div>
                     </div>
                 </div>
             </div>
         );
 
-        // 2. Product Card (Updated onClick)
+        // --- 2. PRODUCT CARD (CLICK OPENS INTERNAL VIEW) ---
         const ProductCard = ({ product, onClick }) => (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
-                <div className="h-48 bg-gray-50 flex items-center justify-center overflow-hidden relative cursor-pointer" onClick={() => onClick(product)}>
+            <div 
+                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer group"
+                onClick={() => onClick(product)}
+            >
+                <div className="h-56 bg-gray-50 flex items-center justify-center overflow-hidden relative">
                     {product.image_url ? (
-                        <img src={product.image_url} alt={product.title} className="w-full h-full object-contain p-4" />
+                        <img src={product.image_url} alt={product.title} className="w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500 mix-blend-multiply" />
                     ) : (
                         <div className="text-gray-300"><i data-lucide="image" size="48"></i></div>
                     )}
-                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-700">
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-bold text-gray-800 shadow-sm">
                         {product.price}
                     </div>
                 </div>
-                <div className="p-4 flex-1 flex flex-col">
-                    <h3 
-                        className="font-semibold text-gray-800 line-clamp-1 cursor-pointer hover:text-indigo-600" 
-                        title={product.title}
-                        onClick={() => onClick(product)}
-                    >
+                <div className="p-5 flex-1 flex flex-col">
+                    <h3 className="font-bold text-gray-800 line-clamp-1 mb-1 text-lg group-hover:text-indigo-600 transition-colors" title={product.title}>
                         {product.title}
                     </h3>
-                    <p className="text-xs text-indigo-600 font-medium mb-2">{product.category}</p>
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">{product.description}</p>
+                    <p className="text-xs text-indigo-500 font-semibold mb-3 uppercase tracking-wide">{product.category}</p>
+                    <p className="text-sm text-gray-500 line-clamp-2 mb-5 flex-1 leading-relaxed">{product.description}</p>
                     
-                    {/* CHANGED: Opens Internal Detail View instead of External Link */}
-                    <button 
-                        onClick={() => onClick(product)}
-                        className="w-full text-center bg-white border border-gray-200 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors"
-                    >
+                    <button className="w-full text-center bg-gray-50 border border-gray-200 text-gray-700 py-2.5 rounded-lg text-sm font-semibold group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent transition-all">
                         View Details
                     </button>
                 </div>
             </div>
         );
 
-        // 3. Chat Message
+        // --- 3. CHAT MESSAGE ---
         const ChatMessage = ({ msg, onProductClick }) => {
             const isBot = msg.role === 'bot';
             
@@ -122,7 +118,7 @@
                     <span key={i} className="block mb-2">
                         {line.split(/(\*\*.*?\*\*)/).map((part, j) => {
                             if (part.startsWith('**') && part.endsWith('**')) {
-                                return <strong key={j}>{part.slice(2, -2)}</strong>;
+                                return <strong key={j} className="text-indigo-900 font-bold">{part.slice(2, -2)}</strong>;
                             }
                             return part;
                         })}
@@ -132,19 +128,21 @@
 
             return (
                 <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} mb-6 animate-fade-in`}>
-                    <div className={`max-w-[85%] ${isBot ? '' : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm p-4 shadow-md'}`}>
+                    <div className={`max-w-[90%] md:max-w-[80%] ${isBot ? '' : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm p-4 shadow-md'}`}>
                         {isBot && (
                             <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">AI</div>
-                                <span className="text-xs font-semibold text-gray-500">Neusearch Assistant</span>
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">AI</div>
+                                <span className="text-xs font-bold text-gray-500">Findly Assistant</span>
                             </div>
                         )}
-                        <div className={isBot ? "bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-gray-700 leading-relaxed" : ""}>
-                            <div>{formatText(msg.content)}</div>
+                        <div className={isBot ? "bg-white p-6 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-gray-700 leading-relaxed" : ""}>
+                            <div className="text-sm md:text-base">{formatText(msg.content)}</div>
                             {msg.products && msg.products.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-gray-100">
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Recommended for you</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="mt-6 pt-6 border-t border-gray-100">
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                        <i data-lucide="sparkles" className="w-3 h-3 text-yellow-500"></i> Recommended for you
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {msg.products.map(p => (
                                             <ProductCard key={p.id} product={p} onClick={onProductClick} />
                                         ))}
@@ -157,16 +155,16 @@
             );
         };
 
-        // 4. Main App
+        // --- 4. MAIN APP LOGIC ---
         const App = () => {
-            const [view, setView] = useState('home'); // home, chat, detail
+            const [view, setView] = useState('home'); 
             const [products, setProducts] = useState([]);
-            const [selectedProduct, setSelectedProduct] = useState(null); // Track clicked product
+            const [selectedProduct, setSelectedProduct] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [query, setQuery] = useState('');
             const [chatHistory, setChatHistory] = useState([
-                { role: 'bot', content: "Hello! I'm your AI shopping assistant. Ask me anything like 'I have dry hair' or 'Something for a party'." }
+                { role: 'bot', content: "Hello! I'm Findly. Tell me about your hair or health concerns, and I'll find the right products for you." }
             ]);
             const [isTyping, setIsTyping] = useState(false);
             const chatEndRef = useRef(null);
@@ -175,7 +173,7 @@
                 setLoading(true);
                 fetch('/products')
                     .then(res => {
-                        if (!res.ok) throw new Error("Failed to connect to backend");
+                        if (!res.ok) throw new Error("Failed to connect");
                         return res.json();
                     })
                     .then(data => {
@@ -184,7 +182,7 @@
                         setTimeout(() => lucide.createIcons(), 100);
                     })
                     .catch(err => {
-                        setError("Could not connect to the Backend API.");
+                        setError("Could not connect to backend.");
                         setLoading(false);
                     });
             }, []);
@@ -194,11 +192,12 @@
                     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }
                 lucide.createIcons();
-            }, [chatHistory, view, products]);
+            }, [chatHistory, view, products, selectedProduct]);
 
             const handleProductClick = (product) => {
                 setSelectedProduct(product);
                 setView('detail');
+                window.scrollTo(0,0); // Scroll to top when opening detail
             };
 
             const handleSend = async (e) => {
@@ -212,84 +211,98 @@
 
                 try {
                     const res = await fetch(`/chat?query=${encodeURIComponent(userMsg.content)}`, { method: 'POST' });
-                    if (!res.ok) throw new Error("API Error");
                     const data = await res.json();
                     const botMsg = { role: 'bot', content: data.response, products: data.recommended_products };
                     setChatHistory(prev => [...prev, botMsg]);
                 } catch (error) {
-                    setChatHistory(prev => [...prev, { role: 'bot', content: "⚠️ Connection Error: I cannot reach the server." }]);
+                    setChatHistory(prev => [...prev, { role: 'bot', content: "⚠️ Error: Server connection failed." }]);
                 } finally {
                     setIsTyping(false);
                 }
             };
 
             return (
-                <div className="flex h-screen overflow-hidden">
+                <div className="flex h-screen overflow-hidden text-gray-800">
                     {/* Sidebar */}
-                    <div className="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex">
+                    <div className="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex shrink-0">
                         <div className="p-6">
-                            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Neusearch AI</h1>
-                            <p className="text-xs text-gray-400 mt-1">Intern Assignment</p>
+                            <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 tracking-tight">Findly.</h1>
+                            <p className="text-xs text-gray-400 font-medium mt-1">AI Product Discovery</p>
                         </div>
                         <nav className="flex-1 px-4 space-y-2">
-                            <button onClick={() => setView('home')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === 'home' || view === 'detail' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}><i data-lucide="layout-grid" className="w-5 h-5"></i> All Products</button>
-                            <button onClick={() => setView('chat')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === 'chat' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}><i data-lucide="message-square" className="w-5 h-5"></i> AI Assistant</button>
+                            <button onClick={() => setView('home')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${view === 'home' || view === 'detail' ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100' : 'text-gray-500 hover:bg-gray-50'}`}><i data-lucide="layout-grid" width="18"></i> Browse Products</button>
+                            <button onClick={() => setView('chat')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${view === 'chat' ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100' : 'text-gray-500 hover:bg-gray-50'}`}><i data-lucide="message-square" width="18"></i> AI Assistant</button>
                         </nav>
+                        <div className="p-6 border-t border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="user" width="16"></i></div>
+                                <div className="text-xs">
+                                    <p className="font-bold text-gray-700">Guest User</p>
+                                    <p className="text-gray-400">Intern Project</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Main Content */}
-                    <main className="flex-1 flex flex-col h-full relative">
-                        <div className="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-                            <span className="font-bold text-lg text-indigo-600">Neusearch</span>
+                    {/* Mobile Header */}
+                    <div className="flex-1 flex flex-col h-full relative">
+                        <div className="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0 z-10">
+                            <span className="font-black text-xl text-indigo-600">Findly.</span>
                             <div className="flex gap-2">
-                                <button onClick={() => setView('home')} className={`p-2 rounded ${view === 'home' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500'}`}><i data-lucide="layout-grid" width="20"></i></button>
-                                <button onClick={() => setView('chat')} className={`p-2 rounded ${view === 'chat' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500'}`}><i data-lucide="message-square" width="20"></i></button>
+                                <button onClick={() => setView('home')} className={`p-2 rounded-lg ${view === 'home' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400'}`}><i data-lucide="layout-grid" width="20"></i></button>
+                                <button onClick={() => setView('chat')} className={`p-2 rounded-lg ${view === 'chat' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400'}`}><i data-lucide="message-square" width="20"></i></button>
                             </div>
                         </div>
 
                         {/* VIEW: HOME */}
                         {view === 'home' && (
-                            <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                                <div className="flex justify-between items-end mb-8">
-                                    <div><h2 className="text-2xl font-bold text-gray-800">Discover Products</h2><p className="text-gray-500 mt-1">Showing {products.length} scraped items</p></div>
-                                </div>
-                                {loading ? <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div> : 
-                                 error ? <div className="text-center text-red-500 py-10">{error}</div> :
-                                (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                        {products.map(product => (
-                                            <ProductCard key={product.id} product={product} onClick={handleProductClick} />
-                                        ))}
+                            <div className="flex-1 overflow-y-auto p-6 md:p-10 bg-gray-50/50">
+                                <div className="max-w-7xl mx-auto">
+                                    <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+                                        <div>
+                                            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Discover</h2>
+                                            <p className="text-gray-500 mt-2">Explore our curated collection of {products.length} products.</p>
+                                        </div>
                                     </div>
-                                )}
+                                    
+                                    {loading ? <div className="flex justify-center py-40"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div> : 
+                                     error ? <div className="text-center text-red-500 py-20 bg-white rounded-xl border border-red-100 shadow-sm">{error}</div> :
+                                    (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+                                            {products.map(product => (
+                                                <ProductCard key={product.id} product={product} onClick={handleProductClick} />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
 
-                        {/* VIEW: DETAIL (NEW) */}
+                        {/* VIEW: DETAIL (The Internal Page) */}
                         {view === 'detail' && selectedProduct && (
                             <ProductDetail product={selectedProduct} onBack={() => setView('home')} />
                         )}
 
                         {/* VIEW: CHAT */}
                         {view === 'chat' && (
-                            <div className="flex-1 flex flex-col h-full bg-white md:bg-transparent">
-                                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
+                            <div className="flex-1 flex flex-col h-full bg-white md:bg-gray-50/50">
+                                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-4xl mx-auto w-full">
                                     {chatHistory.map((msg, i) => (
                                         <ChatMessage key={i} msg={msg} onProductClick={handleProductClick} />
                                     ))}
                                     {isTyping && <div className="flex justify-start animate-fade-in"><div className="bg-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 flex gap-1"><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div><div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div></div></div>}
                                     <div ref={chatEndRef}></div>
                                 </div>
-                                <div className="p-4 bg-white border-t border-gray-200">
+                                <div className="p-4 bg-white border-t border-gray-200 shrink-0">
                                     <form onSubmit={handleSend} className="max-w-3xl mx-auto relative flex gap-2">
-                                        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ask anything... e.g. 'I have dandruff'" className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-                                        <button type="submit" disabled={!query.trim() || isTyping} className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><i data-lucide="send" width="20"></i></button>
+                                        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Type 'I have hair fall'..." className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-inner" />
+                                        <button type="submit" disabled={!query.trim() || isTyping} className="bg-indigo-600 text-white p-4 rounded-2xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 shadow-md hover:shadow-indigo-200"><i data-lucide="send" width="20"></i></button>
                                     </form>
-                                    <p className="text-center text-xs text-gray-400 mt-2">Powered by Gemini Flash & pgvector</p>
+                                    <p className="text-center text-[10px] text-gray-400 mt-3 font-medium uppercase tracking-widest">Powered by Gemini AI</p>
                                 </div>
                             </div>
                         )}
-                    </main>
+                    </div>
                 </div>
             );
         };
@@ -298,3 +311,4 @@
     </script>
 </body>
 </html>
+```
