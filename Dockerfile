@@ -3,8 +3,10 @@ FROM python:3.10-slim
 
 # 2. Set environment variables
 ENV PYTHONUNBUFFERED=1
-# Add the current directory to Python path so it can find the 'backend' module
-ENV PYTHONPATH=/app
+
+# --- THE FIX ---
+# We add '/app/backend' to the path so Python finds models.py, utils.py, etc.
+ENV PYTHONPATH=/app:/app/backend
 
 # 3. Set the working directory
 WORKDIR /app
@@ -15,17 +17,12 @@ COPY requirements.txt .
 # 5. Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# --- THE FIX ---
-# Do NOT flatten. Copy the folder AS a folder.
-# This creates /app/backend/ inside the container
+# 6. Copy folders structure properly
 COPY backend/ backend/
-
-# Copy frontend as well
 COPY frontend/ frontend/
 
-# 6. Expose port
+# 7. Expose port
 EXPOSE 10000
 
-# 7. Start the app pointing to the backend module
-# Notice the change: 'backend.main:app' instead of just 'main:app'
+# 8. Start the app
 CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
